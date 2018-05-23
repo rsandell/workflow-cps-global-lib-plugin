@@ -64,11 +64,16 @@
     <properties>
         <jenkins.version>2.7.3</jenkins.version>
         <workflow-cps-plugin.version>2.39</workflow-cps-plugin.version>
-        <git-plugin.version>3.1.0</git-plugin.version>
-        <scm-api-plugin.version>2.1.1</scm-api-plugin.version>
+        <git-plugin.version>3.4.1</git-plugin.version>
+        <scm-api-plugin.version>2.2.0</scm-api-plugin.version>
         <workflow-scm-step-plugin.version>2.4</workflow-scm-step-plugin.version>
     </properties>
     <dependencies>
+        <dependency>
+            <groupId>org.jenkins-ci.plugins</groupId>
+            <artifactId>structs</artifactId>
+            <version>1.9</version>
+        </dependency>
         <dependency>
             <groupId>org.jenkins-ci.plugins.workflow</groupId>
             <artifactId>workflow-cps</artifactId>
@@ -88,7 +93,7 @@
         <dependency>
             <groupId>org.jenkins-ci.plugins</groupId>
             <artifactId>git-client</artifactId>
-            <version>2.3.0</version> <!-- do not pick up an obsolete version from git-server -->
+            <version>2.4.6</version> <!-- do not pick up an obsolete version from git-server -->
         </dependency>
         <dependency>
             <groupId>org.jenkins-ci.plugins</groupId>

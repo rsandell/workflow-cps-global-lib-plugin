@@ -30,15 +30,27 @@ import hudson.model.View;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+
+import hudson.plugins.git.browser.GitLab;
 import jenkins.model.Jenkins;
 import jenkins.plugins.git.GitSCMSource;
+import jenkins.plugins.git.traits.GitBrowserSCMSourceTrait;
+import jenkins.plugins.git.traits.IgnoreOnPushNotificationTrait;
+import jenkins.scm.api.trait.SCMSourceTrait;
 import jenkins.scm.impl.subversion.SubversionSCMSource;
+import static org.hamcrest.core.IsCollectionContaining.hasItem;
 import static org.hamcrest.Matchers.*;
+
+import org.hamcrest.Description;
+import org.hamcrest.Matcher;
+import org.hamcrest.TypeSafeMatcher;
 import org.junit.Test;
 import static org.junit.Assert.*;
 import org.junit.Rule;
+import org.jvnet.hudson.test.Issue;
 import org.jvnet.hudson.test.JenkinsRule;
 import org.jvnet.hudson.test.MockAuthorizationStrategy;
+import org.jvnet.hudson.test.recipes.LocalData;
 
 public class GlobalLibrariesTest {
 
@@ -69,6 +81,82 @@ public class GlobalLibrariesTest {
         r.submit(configurePage.getFormByName("config"));
         libs = gl.getLibraries();
         r.assertEqualDataBoundBeans(Arrays.asList(foo, bar), libs);
+    }
+
+    @Issue("JENKINS-45747")
+    @Test @LocalData
+    public void loadOldGitConfig() {
+        final GlobalLibraries libraries = GlobalLibraries.get();
+        assertNotNull(libraries);
+        assertThat(libraries.getLibraries(), hasSize(1));
+        final LibraryConfiguration configuration = libraries.getLibraries().get(0);
+        assertEquals(configuration.getName(), "jenkins-groovy-common");
+        final SCMSourceRetriever retriever = (SCMSourceRetriever) configuration.getRetriever();
+        assertNotNull(retriever);
+        assertThat(retriever.getScm(), instanceOf(GitSCMSource.class));
+        GitSCMSource scm = (GitSCMSource) retriever.getScm();
+        assertEquals(scm.getRemote(), "git@mygitserver/jenkins-groovy-common.git");
+        final List<? extends SCMSourceTrait> traits = scm.getTraits();
+        //assertThat(traits, hasSize(2));
+        assertThat(traits, new ListContains(new IsAnInstanceOf(IgnoreOnPushNotificationTrait.class)));
+        assertThat(traits, new ListContains(allOf(
+                new IsAnInstanceOf(GitBrowserSCMSourceTrait.class),
+                hasProperty("browser", instanceOf(GitLab.class)))));
+
+    }
+
+    /**
+     * Hamcrest matchers are awful when dealing with lists and generics
+     */
+    static class IsAnInstanceOf extends TypeSafeMatcher<SCMSourceTrait> {
+
+        private final Class<? extends SCMSourceTrait> klass;
+
+        public IsAnInstanceOf(Class<? extends SCMSourceTrait> klass) {
+            this.klass = klass;
+        }
+
+        @Override
+        protected boolean matchesSafely(SCMSourceTrait item) {
+            return klass.isAssignableFrom(item.getClass());
+        }
+
+
+        @Override
+        public void describeTo(Description description) {
+            description.appendText(" instanceOf ");
+            description.appendText(klass.getName());
+        }
+
+
+    }
+
+    /**
+     * Hamcrest matchers are awful when dealing with lists and generics
+     */
+    static class ListContains extends TypeSafeMatcher<List<? extends SCMSourceTrait>> {
+
+        private final Matcher<? extends SCMSourceTrait> itemMatcher;
+
+        public ListContains(Matcher<? extends SCMSourceTrait> itemMatcher) {
+            this.itemMatcher = itemMatcher;
+        }
+
+        @Override
+        protected boolean matchesSafely(List<? extends SCMSourceTrait> item) {
+            for (Object t : item) {
+                if (itemMatcher.matches(t)) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        @Override
+        public void describeTo(Description description) {
+            description.appendText("A list containing ");
+            description.appendDescriptionOf(itemMatcher);
+        }
     }
 
 }
